@@ -6,12 +6,7 @@ import type { ResumeParseResult } from "@/lib/skillpath/types";
 
 const require = createRequire(import.meta.url);
 
-type PdfParseModule = {
-  PDFParse: new (options: { data: Buffer }) => {
-    getText(): Promise<{ text: string }>;
-    destroy(): Promise<void>;
-  };
-};
+type PdfParseModule = (data: Buffer) => Promise<{ text: string }>;
 
 type MammothModule = {
   extractRawText: (input: { buffer: Buffer }) => Promise<{ value: string }>;
@@ -25,11 +20,52 @@ type WordExtractorClass = new () => {
   extract(source: Buffer): Promise<WordExtractorDocument>;
 };
 
+function ensureDomMatrixShim() {
+  if (typeof globalThis.DOMMatrix !== "undefined") {
+    return;
+  }
+
+  class DOMMatrix {
+    a = 1;
+    b = 0;
+    c = 0;
+    d = 1;
+    e = 0;
+    f = 0;
+
+    multiply() {
+      return this;
+    }
+
+    translate() {
+      return this;
+    }
+
+    scale() {
+      return this;
+    }
+
+    inverse() {
+      return this;
+    }
+
+    toString() {
+      return "matrix(1, 0, 0, 1, 0, 0)";
+    }
+  }
+
+  Object.defineProperty(globalThis, "DOMMatrix", {
+    value: DOMMatrix,
+    configurable: true,
+    writable: true
+  });
+}
+
 async function parsePdf(buffer: Buffer) {
-  const { PDFParse } = require("pdf-parse") as PdfParseModule;
-  const parser = new PDFParse({ data: buffer });
-  const result = await parser.getText();
-  await parser.destroy();
+  ensureDomMatrixShim();
+
+  const pdfParse = require("pdf-parse") as PdfParseModule;
+  const result = await pdfParse(buffer);
   return result.text;
 }
 
