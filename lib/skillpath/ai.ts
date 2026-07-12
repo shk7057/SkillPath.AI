@@ -226,8 +226,60 @@ export async function transcribeAudioWithGroq(input: {
   }
 }
 
+function sanitizeInterviewQuestion(text: string | null) {
+  if (!text) {
+    return null;
+  }
+
+  const normalized = text
+    .replace(/\u00a0/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!normalized) {
+    return null;
+  }
+
+  const paragraphs = normalized
+    .split(/\n\s*\n+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  const firstParagraph = paragraphs[0] ?? normalized;
+  const cleaned = firstParagraph
+    .replace(/^[-*•\d.\s]+/, "")
+    .replace(/^['"`]+|['"`]+$/g, "")
+    .trim();
+
+  if (!cleaned) {
+    return null;
+  }
+
+  const looksLikeQuestion = /\?/.test(cleaned) && !/(here are|here's|options|choose|instructions|prompt|system)/i.test(cleaned);
+
+  return looksLikeQuestion ? cleaned : null;
+}
+
 export async function enhanceText(prompt: string) {
   return (await callGemini(prompt)) ?? (await callGroq(prompt)) ?? null;
+}
+
+export async function rewriteInterviewQuestion(
+  question: string,
+  role: string,
+  difficulty: string
+) {
+  const prompt = [
+    "Rewrite the following interview question so it is concise, role-specific, and practical.",
+    "Return only one interview question and nothing else.",
+    "Do not include instructions, bullet points, or commentary.",
+    `Role: ${role}`,
+    `Difficulty: ${difficulty}`,
+    `Question: ${question}`
+  ].join("\n");
+
+  const enhanced = await enhanceText(prompt);
+  return sanitizeInterviewQuestion(enhanced) ?? question;
 }
 
 export async function enhanceList(prompt: string, maxItems = 4) {

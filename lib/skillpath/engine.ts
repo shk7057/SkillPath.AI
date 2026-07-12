@@ -445,7 +445,7 @@ function getQuestionBank(role: string, difficulty: "Easy" | "Medium" | "Advanced
   return (
     ROLE_DEFINITIONS.find((item) => item.name === role)?.questionBank[difficulty] ??
     []
-  );
+  ).filter((question): question is string => Boolean(question && question.trim()));
 }
 
 export function startInterview(input: {
@@ -453,8 +453,8 @@ export function startInterview(input: {
   difficulty: "Easy" | "Medium" | "Advanced";
 }) {
   const questions = getQuestionBank(input.role, input.difficulty);
-  const question =
-    questions[0] ?? "Tell me about your strongest project and the impact it created.";
+  const fallbackQuestion = "Tell me about your strongest project and the impact it created.";
+  const question = (questions[0] ?? fallbackQuestion).trim().replace(/^['"`]+|['"`]+$/g, "");
 
   return {
     role: input.role,

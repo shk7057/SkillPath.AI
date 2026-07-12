@@ -49,6 +49,35 @@ export const ROLE_DEFINITIONS: RoleDefinition[] = [
     }
   },
   {
+    name: "AI Engineer",
+    description:
+      "Best fit for candidates who build and ship AI systems, model workflows, and practical LLM-powered features.",
+    requiredSkills: [
+      "Python",
+      "LLMs",
+      "Prompt Engineering",
+      "Machine Learning",
+      "REST APIs",
+      "Docker",
+      "AWS",
+      "Git"
+    ],
+    questionBank: {
+      Easy: [
+        "Tell me about an AI/ML project you built from start to finish.",
+        "How do you decide when to use an LLM versus a traditional ML approach?"
+      ],
+      Medium: [
+        "Describe a time you improved an AI feature by tuning prompts, data, or evaluation criteria.",
+        "How do you evaluate whether an AI product is actually useful for users?"
+      ],
+      Advanced: [
+        "Walk me through how you would design a reliable AI system that can be deployed and monitored in production.",
+        "Tell me about a tradeoff you made between model quality, latency, cost, and maintainability."
+      ]
+    }
+  },
+  {
     name: "Full Stack Developer",
     description:
       "Strong path for candidates who combine product-facing frontend work with APIs, databases, and backend logic.",
