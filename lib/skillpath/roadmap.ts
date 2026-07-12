@@ -12,15 +12,9 @@ export type RoadmapWeek = {
   week: number;
   phase: RoadmapPhaseLabel;
   title: string;
-  learningGoal: string;
   learningTopics: string[];
-  theoryTopics: string[];
   practicalTasks: string[];
-  handsOnTasks: string[];
   miniProject: string;
-  practiceQuestions: string[];
-  resources: string[];
-  completionCriteria: string[];
   mockInterviewTarget: string;
   resumeImprovement: string;
 };
@@ -174,69 +168,6 @@ function unique(values: string[]) {
   return Array.from(new Set(values.filter(Boolean)));
 }
 
-function normalizeForComparison(value: string) {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-}
-
-function pickUniqueString(
-  candidates: string[],
-  usedSet: Set<string>,
-  fallback: string
-) {
-  for (const candidate of candidates) {
-    const key = normalizeForComparison(candidate);
-    if (!key || usedSet.has(key)) {
-      continue;
-    }
-
-    usedSet.add(key);
-    return candidate;
-  }
-
-  const fallbackKey = normalizeForComparison(fallback);
-  const uniqueFallback = fallbackKey
-    ? `${fallback} (${usedSet.size + 1})`
-    : `Next milestone ${usedSet.size + 1}`;
-
-  usedSet.add(normalizeForComparison(uniqueFallback));
-  return uniqueFallback;
-}
-
-function pickUniqueList(
-  candidates: string[],
-  usedSet: Set<string>,
-  count: number,
-  fallbackBuilder: (index: number) => string
-) {
-  const selected: string[] = [];
-
-  for (const candidate of candidates) {
-    if (selected.length >= count) {
-      break;
-    }
-
-    const key = normalizeForComparison(candidate);
-    if (!key || usedSet.has(key)) {
-      continue;
-    }
-
-    usedSet.add(key);
-    selected.push(candidate);
-  }
-
-  while (selected.length < count) {
-    const fallback = fallbackBuilder(selected.length + 1);
-    const key = normalizeForComparison(fallback);
-
-    if (!key || !usedSet.has(key)) {
-      usedSet.add(key);
-      selected.push(fallback);
-    }
-  }
-
-  return selected;
-}
-
 function titleFromFocus(focusSkills: string[], week: number, phase: RoadmapPhaseLabel) {
   if (focusSkills.length >= 2) {
     return `Week ${week}: Strengthen ${focusSkills[0]} + ${focusSkills[1]}`;
@@ -377,202 +308,82 @@ function buildInterviewFocusQueue(
   return unique(tasks);
 }
 
-function buildLearningGoal(
-  role: JobRole,
-  focusSkills: string[],
-  phase: RoadmapPhaseLabel,
-  week: number,
-  usedSet: Set<string>
-) {
-  const leadFocus = focusSkills[0] ?? role.requiredSkills[(week - 1) % role.requiredSkills.length];
-  const concepts = [
-    `Build confidence with ${leadFocus} by applying it to a realistic ${role.title.toLowerCase()} workflow.`,
-    `Strengthen your grasp of ${leadFocus} enough to explain it clearly and use it in a small project.`,
-    `Turn ${leadFocus} into a reusable skill by building evidence that you can talk about in interviews.`,
-    `Move from theory to practice with ${leadFocus} and one adjacent ${role.category.toLowerCase()} concept.`
-  ];
+function buildLearningTopics(role: JobRole, focusSkills: string[], phase: RoadmapPhaseLabel) {
+  const topics = [...focusSkills];
 
-  if (phase === "60-day roadmap") {
-    concepts.unshift(`Use ${leadFocus} in a more complete project flow that feels close to a real delivery loop.`);
+  if (phase === "30-day roadmap") {
+    topics.push(`${role.title} fundamentals`);
+  } else if (phase === "60-day roadmap") {
+    topics.push(`${role.category} project implementation`);
+  } else {
+    topics.push(`${role.title} interview proof and delivery`);
   }
 
-  if (phase === "90-day roadmap") {
-    concepts.unshift(`Package your experience with ${leadFocus} so it reads clearly in portfolios, resumes, and mock interviews.`);
-  }
-
-  return pickUniqueString(concepts, usedSet, `Finish a focused ${leadFocus} milestone.`);
-}
-
-function buildTheoryTopics(
-  role: JobRole,
-  focusSkills: string[],
-  phase: RoadmapPhaseLabel,
-  week: number,
-  usedSet: Set<string>
-) {
-  const leadFocus = focusSkills[0] ?? role.requiredSkills[(week - 1) % role.requiredSkills.length];
-  const supportFocus = focusSkills[1] ?? role.optionalSkills[(week - 1) % Math.max(role.optionalSkills.length, 1)] ?? "delivery tradeoffs";
-  const candidates = unique([
-    `${leadFocus} fundamentals`,
-    `${supportFocus} patterns`,
-    `${role.title} workflow design`,
-    `${role.category} implementation tradeoffs`,
-    `${leadFocus} debugging strategies`,
-    `${supportFocus} evaluation methods`
-  ]);
-
-  return pickUniqueList(candidates, usedSet, phase === "30-day roadmap" ? 3 : 4, (index) => `${role.title} concept ${index}`);
+  return unique(topics).slice(0, 3);
 }
 
 function buildPracticalTasks(
   role: JobRole,
   focusSkills: string[],
   week: number,
-  phase: RoadmapPhaseLabel,
-  usedSet: Set<string>
+  phase: RoadmapPhaseLabel
 ) {
   const leadFocus = focusSkills[0] ?? role.requiredSkills[(week - 1) % role.requiredSkills.length];
   const supportFocus =
     focusSkills[1] ?? role.requiredSkills[week % role.requiredSkills.length];
 
-  const candidates = [
-    `Study the core patterns behind ${leadFocus} and capture one implementation note you can reuse later.`,
-    `Ship a small practice artifact using ${leadFocus}${supportFocus ? ` and ${supportFocus}` : ""}.`,
-    `Review your output and write down one strength and one improvement before the next checkpoint.`,
-    `Turn ${leadFocus} into a tiny feature that connects to a realistic ${role.title.toLowerCase()} use case.`,
-    `Document one design or debugging decision you made while working with ${leadFocus}.`,
-    `Refine one deliverable so it demonstrates ${leadFocus} more clearly than before.`,
-    `Create a concise demo or walkthrough that explains your work on ${leadFocus}.`
-  ];
+  if (phase === "30-day roadmap") {
+    return [
+      `Study the core patterns behind ${leadFocus} and write short implementation notes.`,
+      `Ship one focused practice task using ${leadFocus}${supportFocus ? ` and ${supportFocus}` : ""}.`,
+      `Review your output and note one thing to improve before the next week.`
+    ];
+  }
 
   if (phase === "60-day roadmap") {
-    candidates.unshift(`Build a more complete workflow around ${leadFocus} and ${supportFocus} instead of a toy example.`);
+    return [
+      `Turn ${leadFocus} into a production-style feature or workflow for a ${role.title.toLowerCase()} portfolio piece.`,
+      `Connect the work to ${supportFocus} so the project feels closer to real role expectations.`,
+      "Document one clear technical tradeoff or decision from the build."
+    ];
   }
 
-  if (phase === "90-day roadmap") {
-    candidates.unshift(`Package your strongest work on ${leadFocus} into something portfolio-ready and easy to explain.`);
-  }
-
-  return pickUniqueList(candidates, usedSet, 3, (index) => `${role.title} task ${index}`);
+  return [
+    `Polish the strongest project evidence for ${leadFocus} and make it recruiter-ready.`,
+    `Practice explaining how ${leadFocus}${supportFocus ? ` and ${supportFocus}` : ""} created impact.`,
+    "Prepare one application-ready proof point you can reuse in interviews and resume bullets."
+  ];
 }
 
 function buildMiniProject(
   role: JobRole,
   focusSkills: string[],
-  week: number,
-  usedSet: Set<string>
+  week: number
 ) {
+  const ideaPool = categoryProjectIdeas[role.category];
   const leadFocus = focusSkills[0] ?? role.requiredSkills[(week - 1) % role.requiredSkills.length];
   const supportFocus =
     focusSkills[1] ?? role.optionalSkills[(week - 1) % Math.max(role.optionalSkills.length, 1)] ?? "real user value";
-  const candidates = [
-    `Calculator`,
-    `Weather App`,
-    `Authentication System`,
-    `Analytics Dashboard`,
-    `Task Board`,
-    `Recommendation Console`,
-    `Content Moderation Lab`,
-    `Deployment Tracker`
-  ];
-  const baseProject = pickUniqueString(candidates, usedSet, `${role.title} project`);
+  const template = ideaPool[(week - 1) % ideaPool.length];
 
-  return `${baseProject} built around ${leadFocus} and ${supportFocus}.`;
-}
-
-function buildPracticeQuestions(
-  role: JobRole,
-  focusSkills: string[],
-  phase: RoadmapPhaseLabel,
-  week: number,
-  usedSet: Set<string>
-) {
-  const leadFocus = focusSkills[0] ?? role.requiredSkills[(week - 1) % role.requiredSkills.length];
-  const candidates = [
-    `How would you explain ${leadFocus} to a teammate in plain language?`,
-    `What tradeoff did you make when solving a ${leadFocus} problem?`,
-    `How would you improve this work if you had one more iteration?`,
-    `What evidence would you show to prove you understand ${leadFocus}?`,
-    `How would you connect ${leadFocus} to a real user or business outcome?`
-  ];
-
-  if (phase === "90-day roadmap") {
-    candidates.unshift(`How would you present your ${leadFocus} work in a portfolio or interview story?`);
-  }
-
-  return pickUniqueList(candidates, usedSet, 2, (index) => `${role.title} reflection ${index}`);
-}
-
-function buildResources(
-  role: JobRole,
-  focusSkills: string[],
-  phase: RoadmapPhaseLabel,
-  week: number,
-  usedSet: Set<string>
-) {
-  const leadFocus = focusSkills[0] ?? role.requiredSkills[(week - 1) % role.requiredSkills.length];
-  const candidates = [
-    `Official ${leadFocus} documentation`,
-    `A practical walkthrough on ${leadFocus} in a ${role.category.toLowerCase()} context`,
-    `A small repository or case study that demonstrates ${leadFocus}`,
-    `A short article or tutorial focused on ${leadFocus} tradeoffs`,
-    `A project template for ${role.title.toLowerCase()} work`
-  ];
-
-  if (phase === "60-day roadmap") {
-    candidates.unshift(`A deeper guide on implementation patterns for ${leadFocus}`);
-  }
-
-  if (phase === "90-day roadmap") {
-    candidates.unshift(`A portfolio-style example showing ${leadFocus} in context`);
-  }
-
-  return pickUniqueList(candidates, usedSet, 3, (index) => `${role.title} resource ${index}`);
-}
-
-function buildCompletionCriteria(
-  role: JobRole,
-  focusSkills: string[],
-  phase: RoadmapPhaseLabel,
-  week: number,
-  usedSet: Set<string>
-) {
-  const leadFocus = focusSkills[0] ?? role.requiredSkills[(week - 1) % role.requiredSkills.length];
-  const candidates = [
-    `You can explain ${leadFocus} clearly and connect it to one concrete example.`,
-    `You completed a small artifact that demonstrates your understanding of ${leadFocus}.`,
-    `You can describe one tradeoff or improvement you would make next.`,
-    `You have a reusable note or demo you can bring into a resume or interview story.`
-  ];
-
-  if (phase === "90-day roadmap") {
-    candidates.unshift(`You can present your work on ${leadFocus} as a clear portfolio or interview story.`);
-  }
-
-  return pickUniqueList(candidates, usedSet, 2, (index) => `${role.title} milestone ${index}`);
+  return `${template} Focus the implementation on ${leadFocus} and ${supportFocus}.`;
 }
 
 function buildMockTarget(
   role: JobRole,
   interviewFocusQueue: string[],
   phase: RoadmapPhaseLabel,
-  week: number,
-  usedSet: Set<string>
+  week: number
 ) {
   const roleTemplate =
     categoryInterviewTargets[role.category][(week - 1) % categoryInterviewTargets[role.category].length];
   const focus = interviewFocusQueue[(week - 1) % interviewFocusQueue.length];
-  const candidates = [
-    `${roleTemplate} This week, emphasize: ${focus}`,
-    `${roleTemplate} End the week with one short mock answer on: ${focus}`,
-    `${roleTemplate} Practice explaining your approach to: ${focus}`
-  ];
 
   if (phase === "90-day roadmap") {
-    candidates.unshift(`${roleTemplate} End the week with one full mock round and review: ${focus}`);
+    return `${roleTemplate} End the week with one full mock round and review: ${focus}`;
   }
 
-  return pickUniqueString(candidates, usedSet, `${role.title} interview target`);
+  return `${roleTemplate} This week, emphasize: ${focus}`;
 }
 
 function deriveSkillCoverage(role: JobRole, skillMatch: SkillMatchSnapshot | null) {
@@ -625,17 +436,6 @@ export function generateCareerRoadmap(input: RoadmapInput) {
     skillCoverage * 0.45 + atsReadiness * 0.3 + interviewReadiness * 0.25
   );
 
-  const usedTitles = new Set<string>();
-  const usedLearningGoals = new Set<string>();
-  const usedTheoryTopics = new Set<string>();
-  const usedTasks = new Set<string>();
-  const usedProjects = new Set<string>();
-  const usedPracticeQuestions = new Set<string>();
-  const usedResources = new Set<string>();
-  const usedCompletionCriteria = new Set<string>();
-  const usedInterviewTargets = new Set<string>();
-  const usedResumeImprovements = new Set<string>();
-
   const weeks = Array.from({ length: 12 }, (_, index) => {
     const week = index + 1;
     const phase =
@@ -651,41 +451,18 @@ export function generateCareerRoadmap(input: RoadmapInput) {
         : role.requiredSkills.slice(index % role.requiredSkills.length, (index % role.requiredSkills.length) + 2)
     ).slice(0, 2);
 
-    const learningGoal = buildLearningGoal(role, focusSkills, phase, week, usedLearningGoals);
-    const theoryTopics = buildTheoryTopics(role, focusSkills, phase, week, usedTheoryTopics);
-    const practicalTasks = buildPracticalTasks(role, focusSkills, week, phase, usedTasks);
-    const miniProject = buildMiniProject(role, focusSkills, week, usedProjects);
-    const practiceQuestions = buildPracticeQuestions(role, focusSkills, phase, week, usedPracticeQuestions);
-    const resources = buildResources(role, focusSkills, phase, week, usedResources);
-    const completionCriteria = buildCompletionCriteria(role, focusSkills, phase, week, usedCompletionCriteria);
-    const title = pickUniqueString(
-      [titleFromFocus(focusSkills, week, phase)],
-      usedTitles,
-      `Week ${week}: Build a stronger ${role.title.toLowerCase()} foundation`
-    );
-    const mockInterviewTarget = buildMockTarget(role, interviewFocusQueue, phase, week, usedInterviewTargets);
-    const resumeImprovement = pickUniqueString(
-      resumeFocusQueue,
-      usedResumeImprovements,
-      `Tailor one resume bullet more clearly for ${role.title}.`
-    );
-
     return {
       id: `${role.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-week-${week}`,
       week,
       phase,
-      title,
-      learningGoal,
-      learningTopics: theoryTopics,
-      theoryTopics,
-      practicalTasks,
-      handsOnTasks: practicalTasks,
-      miniProject,
-      practiceQuestions,
-      resources,
-      completionCriteria,
-      mockInterviewTarget,
-      resumeImprovement
+      title: titleFromFocus(focusSkills, week, phase),
+      learningTopics: buildLearningTopics(role, focusSkills, phase),
+      practicalTasks: buildPracticalTasks(role, focusSkills, week, phase),
+      miniProject: buildMiniProject(role, focusSkills, week),
+      mockInterviewTarget: buildMockTarget(role, interviewFocusQueue, phase, week),
+      resumeImprovement:
+        resumeFocusQueue[(week - 1) % resumeFocusQueue.length] ??
+        `Tailor one resume bullet more clearly for ${role.title}.`
     } satisfies RoadmapWeek;
   });
 
